@@ -2,25 +2,31 @@
 #include "process.h"
 
 instMap instructions = {
-	{"0000", {{"00", "HALT"}, {"01", "LD"}, {"10", "ADD"}, {"11", "J"}}},
-	{"0001", {{"00", "NOP"}, {"01", "ST"}, {"10", "SUB"}, {"11", "JZ"}}},
-	{"0010", {{"00", "?"}, {"01", "EM"}, {"10", "CLR"}, {"11", "JN"}}},
-	{"0011", {{"00", "?"}, {"01", "?"}, {"10", "COM"}, {"11", "JP"}}},
-	{"0100", {{"00", "?"}, {"01", "?"}, {"10", "AND"}, {"11", "?"}}},
-	{"0101", {{"00", "?"}, {"01", "?"}, {"10", "OR"}, {"11", "?"}}},
-	{"0110", {{"00", "?"}, {"01", "?"}, {"10", "XOR"}, {"11", "?"}}},
-	{"0111", {{"00", "?"}, {"01", "?"}, {"10", "?"}, {"11", "?"}}},
-	{"1000", {{"00", "?"}, {"01", "LDX"}, {"10", "ADDX"}, {"11", "?"}}},
-	{"1001", {{"00", "?"}, {"01", "STX"}, {"10", "SUBX"}, {"11", "?"}}},
-	{"1010", {{"00", "?"}, {"01", "EMX"}, {"10", "CLRX"}, {"11", "?"}}},
-	{"1011", {{"00", "?"}, {"01", "?"}, {"10", "?"}, {"11", "?"}}},
-	{"1100", {{"00", "?"}, {"01", "?"}, {"10", "?"}, {"11", "?"}}},
-	{"1101", {{"00", "?"}, {"01", "?"}, {"10", "?"}, {"11", "?"}}},
-	{"1110", {{"00", "?"}, {"01", "?"}, {"10", "?"}, {"11", "?"}}},
-	{"1111", {{"00", "?"}, {"01", "?"}, {"10", "?"}, {"11", "?"}}}
+	{"000000", "HALT"},
+	{"000001", "NOP"},
+	{"110000", "J"},
+	{"110001", "JZ"},
+	{"110010", "JN"},
+	{"110011", "JP"},
+	{"010000", "LD"},
+	{"011000", "LDX"},
+	{"010001", "ST"},
+	{"011001", "STX"},
+	{"010010", "EM"},
+	{"011010", "EMX"},
+	{"100000", "ADD"},
+	{"101000", "ADDX"},
+	{"100001", "SUB"},
+	{"101001", "SUBX"},
+	{"100010", "CLR"}, 
+	{"101010", "CLRX"},
+	{"100011", "COM"}, 
+	{"100100", "AND"},
+	{"100101", "OR"},
+	{"100110", "XOR"},
 };
 
-unordered_map <string, int> aModes= {
+modeMap adrModes= {
 	{"0000", 0},	//Direct
 	{"0001", 1},	//Immediate
 	{"0010", 2},	//Indexed
@@ -28,45 +34,44 @@ unordered_map <string, int> aModes= {
 	{"0110", 4}		//Indirect Indexed
 };
 
-unordered_map <string, vector<bool>> instAMs = {
+instModeMap instAMs = {
 	{"HALT", {true, true, true, true}}, 	// Ignored.
 	{"NOP", {true, true, true, true}}, 		// Ignored
-	{"LD", {true, true, true, true}}, 		// All.
-	{"ST", {true, false, true, true}}, 		// All except Immediate.
-	{"EM", {true, false, true, true}}, 		// All except Immediate.
-	{"LDX", {true, true, false, false}},	// Direct, Immediate.
-	{"STX", {true, false, false, false}}, 	// Direct.
-	{"EMX", {true, false, false, false}}, 	// Direct.
-	{"ADD", {true, true, true, true}}, 		// All.
-	{"SUB", {true, true, true, true}}, 		// All.
-	{"CLR", {true, true, true, true}}, 		// Ignored.
-	{"COM", {true, true, true, true}}, 		// Ignored.
-	{"AND", {true, true, true, true}}, 		// All.
-	{"OR", {true, true, true, true}}, 		// All.
-	{"XOR", {true, true, true, true}}, 		// All.
-	{"ADDX", {true, true, false, false}}, 	// Direct, Immediate.
-	{"SUBX", {true, true, false, false}}, 	// Direct, Immediate.
-	{"CLRX", {true, true, true, true}}, 	// Ignored.
 	{"J", {true, false, true, true}}, 		// All except Immediate.
 	{"JZ", {true, false, true, true}}, 		// All except Immediate.
 	{"JN", {true, false, true, true}},		// All except Immediate.
-	{"JP", {true, false, true, true}} 		// All except Immediate.
+	{"JP", {true, false, true, true}}, 		// All except Immediate.
+	{"LD", {true, true, true, true}}, 		// All.
+	{"LDX", {true, true, false, false}},	// Direct, Immediate.
+	{"ST", {true, false, true, true}}, 		// All except Immediate.
+	{"STX", {true, false, false, false}}, 	// Direct.
+	{"EM", {true, false, true, true}}, 		// All except Immediate.
+	{"EMX", {true, false, false, false}}, 	// Direct.
+	{"ADD", {true, true, true, true}}, 		// All.
+	{"ADDX", {true, true, false, false}}, 	// Direct, Immediate.
+	{"SUB", {true, true, true, true}}, 		// All.
+	{"SUBX", {true, true, false, false}}, 	// Direct, Immediate.
+	{"CLR", {true, true, true, true}}, 		// Ignored.
+	{"CLRX", {true, true, true, true}}, 	// Ignored.
+	{"COM", {true, true, true, true}}, 		// Ignored.
+	{"AND", {true, true, true, true}}, 		// All.
+	{"OR", {true, true, true, true}}, 		// All.
+	{"XOR", {true, true, true, true}} 		// All.
 };
 
-string MAR; 	// Memory Address Register Address of the memory location which is to be loaded from or stored into.
 string IC; 		// Instruction Counter Address of the next instruction to be fetched, decoded, and executed.
-string X0; 		// Index Registers Four registers (X0-X3); contain values to be used in calculating memory addresses.
-string X1; 		// Index Registers Four registers (X0-X3); contain values to be used in calculating memory addresses.
-string X2; 		// Index Registers Four registers (X0-X3); contain values to be used in calculating memory addresses.
-string X3; 		// Index Registers Four registers (X0-X3); contain values to be used in calculating memory addresses.
-string ABUS; 	// Address Bus Used when addresses are to be moved.
+string IR; 		// Instruction Register Instruction being decoded and executed.
+string X[4] = {"0","0","0","0"}; 		// Index Registers Four registers (X0-X3); contain values to be used in calculating memory addresses.
+string MAR; 	// Memory Address Register Address of the memory location which is to be loaded from or stored into.
 string MDR; 	// Memory Data Register Data to be written into, or data most recently read from, memory.
 string AC = "0"; 		// Accumulator The accumulator register.
-string ALU; 	// Arithmetic-Logic Unit Performs computations.
-string IR; 		// Instruction Register Instruction being decoded and executed.
+long ALU; 	// Arithmetic-Logic Unit Performs computations.
+string ABUS; 	// Address Bus Used when addresses are to be moved.
 string DBUS; 	// Data Bus Used when data and instructions are to be moved.
-string PC;		// Program counter
-hexMap hexProg;
+string OpR;		// Op Instruction to be executed
+int Reg;		// Register Used
+bool Neg;		// Negate a value
+int AM;			// Addressing Mode
 binMap binProg;
 
 
@@ -91,11 +96,9 @@ int main( int argc, char** argv )
 		cout << "Unable to open file" << endl;
 		return 1;
 	}
-
 	// read in data
-	PC = readIn (inFile);
-
-	fetchInstruction();
+	IC = readIn (inFile);
+	executeProgram();
 	return 0;
 }
 
